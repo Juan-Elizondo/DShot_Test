@@ -50,7 +50,7 @@ class DShot_ESC
         const dshot_frequency_t& frequency;
         const bool bidirectional;
 
-        rmt_channel_handle_t esc_in_chan = NULL;
+        rmt_channel_handle_t esc_out_chan = NULL;
         rmt_tx_channel_config_t tx_chan_config;
         rmt_encoder_handle_t dshot_loop_encoder = NULL;
         dshot_esc_encoder_config_t loop_encoder_config;
@@ -58,10 +58,11 @@ class DShot_ESC
         rmt_encoder_handle_t dshot_burst_encoder = NULL;
         rmt_tx_event_callbacks_t tx_cbs;
 
-        rmt_channel_handle_t esc_out_chan = NULL;
+        rmt_channel_handle_t esc_in_chan = NULL;
         rmt_rx_channel_config_t rx_chan_config;
         rmt_rx_event_callbacks_t rx_cbs;
         rmt_receive_config_t receive_config;
+        bool rx_enabled = false;
 
         DShot_callback::tx_user_data tx_callback_data;
         DShot_callback::rx_user_data rx_callback_data;

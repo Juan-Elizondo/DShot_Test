@@ -107,6 +107,7 @@ DShot_ESC::DShot_ESC(const dshot_frequency_t _frequency, bool _bidirectional, gp
         ESP_ERROR_CHECK(rmt_new_rx_channel(&rx_chan_config, &this->esc_in_chan));
         ESP_ERROR_CHECK(rmt_rx_register_event_callbacks(this->esc_in_chan, &rx_cbs, &this->rx_callback_data));
         ESP_ERROR_CHECK(rmt_enable(this->esc_in_chan));
+        this->rx_enabled = true;
     }
 
     this->tx_chan_config = {
@@ -171,8 +172,12 @@ void DShot_ESC::Throttle_Write(uint16_t throttle)
         this->rx_callback_data.ESC_data.data_valid = 0;
         this->rx_callback_data.ESC_data.debug.error_message = 0x00;
 
-        ESP_ERROR_CHECK(rmt_disable(this->esc_in_chan));
+        if(rx_enabled)
+        {
+            ESP_ERROR_CHECK(rmt_disable(this->esc_in_chan));
+        }
         ESP_ERROR_CHECK(rmt_enable(this->esc_in_chan));
+        rx_enabled = true;
     }
 
     ESP_ERROR_CHECK(rmt_disable(this->esc_out_chan));
@@ -188,19 +193,6 @@ void IRAM_ATTR ESC_Arm_Timer_Callback(void* params)
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 void DShot_ESC::Arm_ESC(void)
 {
-    esp_timer_handle_t esc_arm_timer_handle;
-    bool timer_trigger = false;
-    const esp_timer_create_args_t arm_timer_args = {
-        .callback = &ESC_Arm_Timer_Callback,
-        .arg = &timer_trigger,
-        .dispatch_method = ESP_TIMER_ISR,
-        .name = "ESC_Arm_Loop_Timer",
-        .skip_unhandled_events = true
-    };
-    ESP_ERROR_CHECK(esp_timer_create(&arm_timer_args,&esc_arm_timer_handle));
-    uint64_t timer_timeout = 2*1000000; // 2 second timer
-    ESP_ERROR_CHECK(esp_timer_start_once(esc_arm_timer_handle, timer_timeout));
-
     rmt_transmit_config_t tx_config = {
         .loop_count = -1, // infinite loop
         .flags = {0} // eot_level
@@ -211,16 +203,13 @@ void DShot_ESC::Arm_ESC(void)
         .bidirectional = bidirectional
     };
 
-    ESP_ERROR_CHECK(rmt_disable(this->esc_in_chan));
+    if(bidirectional)
+    {
+        ESP_ERROR_CHECK(rmt_disable(this->esc_in_chan));
+        rx_enabled = false;
+    }
     ESP_ERROR_CHECK(rmt_disable(this->esc_out_chan));
     ESP_ERROR_CHECK(rmt_enable(this->esc_out_chan));
     ESP_ERROR_CHECK(rmt_transmit(this->esc_out_chan, this->dshot_loop_encoder, &esc_throttle, sizeof(esc_throttle), &tx_config));
-
-    while(!timer_trigger){} // 2 second timer
-
-    ESP_ERROR_CHECK(esp_timer_delete(esc_arm_timer_handle));
-    ESP_ERROR_CHECK(rmt_disable(this->esc_out_chan));
-    ESP_ERROR_CHECK(rmt_enable(this->esc_out_chan));
-    ESP_ERROR_CHECK(rmt_enable(this->esc_in_chan));
 }
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
