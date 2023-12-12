@@ -1,28 +1,61 @@
 #include <MainTest.h>
-
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
+void IRAM_ATTR Main_Loop_Timer_Callback(void* params)
+{
+    bool* loop_timer = (bool*)params;
+    *loop_timer = true;
+}
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 void Main_Test::setup(void)
 {
-    const gpio_config_t dshot_io_config = {
-        .pin_bit_mask = (1ULL<<ESC_L_out)|(1ULL<<ESC_R_out),
-        .mode = GPIO_MODE_OUTPUT_OD,
-        .pull_up_en = GPIO_PULLUP_ENABLE,
-        .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_DISABLE
-    };
-    ESP_ERROR_CHECK(gpio_config(&dshot_io_config));
-}
 
+}
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 void Main_Test::loop(void)
 {
+    dshot_frequency_t ESC_freq = DSHOT1200;
     bool bidirectional = true;
-    //DShot_ESC L_ESC(bidirectional, ESC_L_out, ESC_L_in,"L_ESC");
-    DShot_ESC R_ESC(bidirectional, ESC_R_out, ESC_R_in, "R_ESC");
-    vTaskDelay(2000/portTICK_PERIOD_MS);
+    bool TXS_Buffer = true;
+
+    //ESCData ESC_L_data;
+    ESCData ESC_R_data;
+    //DShot_ESC L_ESC(ESC_freq, bidirectional, ESC_L, TXS_Buffer, "L_ESC", ESC_L_data);
+    DShot_ESC R_ESC(ESC_freq, bidirectional, ESC_R, TXS_Buffer, "R_ESC", ESC_R_data);
+
+    esp_timer_handle_t main_loop_timer_handle;
+    bool main_loop_timer = false;
+    const esp_timer_create_args_t main_loop_timer_args = {
+        .callback = &Main_Loop_Timer_Callback,
+        .arg = &main_loop_timer,
+        .dispatch_method = ESP_TIMER_ISR,
+        .name = "Main_Loop_Timer",
+        .skip_unhandled_events = true
+    };
+    uint64_t period_us = 400;
+    ESP_ERROR_CHECK(esp_timer_create(&main_loop_timer_args,&main_loop_timer_handle));
+    esp_timer_start_periodic(main_loop_timer_handle, period_us);
+
     uint16_t throttle = 100;
+    ESC_R_data.data_valid = 0;
+    int counter = 0;
     while(true)
     {
-        //L_ESC.DshotWrite(throttle);
-        R_ESC.DshotWrite(throttle);
-        vTaskDelay(1000/portTICK_PERIOD_MS);
+        if(main_loop_timer)
+        {
+            main_loop_timer = false;
+            //L_ESC.Throttle_Write(throttle);
+            R_ESC.Throttle_Write(throttle);
+        }
+        if(ESC_R_data.data_valid)
+        {
+            
+            ESC_R_data.data_valid = 0;
+            counter++;
+        }
+        if(counter==1000000/period_us)
+        {
+            ESP_LOGI("Main", "eRPM: %u",(unsigned int)ESC_R_data.latest_eRPM);
+            counter = 0;
+        }
     }
 }

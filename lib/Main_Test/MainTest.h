@@ -8,6 +8,7 @@
 #include "freertos/task.h"
 #include "driver/spi_master.h"
 #include "driver/gpio.h"
+#include "esp_timer.h"
 
 class Main_Test
 {
@@ -16,10 +17,10 @@ class Main_Test
         void loop();
 
         // DShot pins
-        const gpio_num_t ESC_L_out = GPIO_NUM_22;
-        const gpio_num_t ESC_L_in = GPIO_NUM_4;
-        const gpio_num_t ESC_R_out = GPIO_NUM_23;
-        const gpio_num_t ESC_R_in = GPIO_NUM_5;
+        const gpio_num_t ESC_L = GPIO_NUM_22;
+        const gpio_num_t ESC_R = GPIO_NUM_23;
+
+    private:
 
 
 };

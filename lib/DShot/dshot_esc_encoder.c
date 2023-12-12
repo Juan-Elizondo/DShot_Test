@@ -1,14 +1,16 @@
 /*
+ * Relying heavily on https://github.com/espressif/esp-idf/tree/master/examples/peripherals/rmt/dshot_esc
+ *
  * SPDX-FileCopyrightText: 2021-2022 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 #include "esp_check.h"
 #include "dshot_esc_encoder.h"
-
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 static const char *TAG = "dshot_encoder";
-
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 /**
  * @brief Type of Dshot ESC frame
  */
@@ -20,19 +22,11 @@ typedef union {
     };
     uint16_t val;
 } dshot_esc_frame_t;
-
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 #ifndef __cplusplus
 _Static_assert(sizeof(dshot_esc_frame_t) == 0x02, "Invalid size of dshot_esc_frame_t structure");
 #endif
-
-typedef struct {
-    rmt_encoder_t base;
-    rmt_encoder_t *bytes_encoder;
-    rmt_encoder_t *copy_encoder;
-    rmt_symbol_word_t dshot_delay_symbol;
-    int state;
-} rmt_dshot_esc_encoder_t;
-
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 static void make_dshot_frame(dshot_esc_frame_t *frame, uint16_t throttle, bool telemetry, bool bidirectional)
 {
     frame->throttle = throttle;
@@ -52,7 +46,7 @@ static void make_dshot_frame(dshot_esc_frame_t *frame, uint16_t throttle, bool t
     // change the endian
     frame->val = ((val & 0xFF) << 8) | ((val & 0xFF00) >> 8);
 }
-
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 static size_t rmt_encode_dshot_esc(rmt_encoder_t *encoder, rmt_channel_handle_t channel,
                                    const void *primary_data, size_t data_size, rmt_encode_state_t *ret_state)
 {
@@ -95,7 +89,7 @@ out:
     *ret_state = state;
     return encoded_symbols;
 }
-
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 static esp_err_t rmt_del_dshot_encoder(rmt_encoder_t *encoder)
 {
     rmt_dshot_esc_encoder_t *dshot_encoder = __containerof(encoder, rmt_dshot_esc_encoder_t, base);
@@ -113,8 +107,8 @@ static esp_err_t rmt_dshot_encoder_reset(rmt_encoder_t *encoder)
     dshot_encoder->state = 0;
     return ESP_OK;
 }
-
-esp_err_t rmt_new_dshot_esc_encoder(const dshot_esc_encoder_config_t *config, rmt_encoder_handle_t *ret_encoder)
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
+esp_err_t rmt_new_dshot_esc_encoder(const dshot_esc_encoder_config_t *config, rmt_encoder_handle_t *ret_encoder, bool TXS_Buffer)
 {
     esp_err_t ret = ESP_OK;
     rmt_dshot_esc_encoder_t *dshot_encoder = NULL;
@@ -133,12 +127,12 @@ esp_err_t rmt_new_dshot_esc_encoder(const dshot_esc_encoder_config_t *config, rm
     };
     dshot_encoder->dshot_delay_symbol = dshot_delay_symbol;
     // different dshot protocol have its own timing requirements,
-    float period_ticks = (float)config->resolution / config->baud_rate;
-    // 1 and 0 is represented by a 74.850% and 37.425% duty cycle respectively
-    //unsigned int t1h_ticks = (unsigned int)(period_ticks * 0.7485);
-    unsigned int t1h_ticks = (unsigned int)(period_ticks * (0.7485-.06)); //bidirectional timing cuz hardware ramps bad yo
+    float period_ticks = ((float)config->resolution) / ((float)config->baud_rate);
+    // 1 and 0 is represented by a 75% and 37.5% duty cycle respectively
+    // shorten pulses if using TXS buffer, accounting for slower rising edges
+    unsigned int t1h_ticks = (unsigned int)(period_ticks * (0.75-((float)TXS_Buffer)*0.00000015*(float)config->baud_rate));
     unsigned int t1l_ticks = (unsigned int)(period_ticks - t1h_ticks);
-    unsigned int t0h_ticks = (unsigned int)(period_ticks * (0.37425-.06));
+    unsigned int t0h_ticks = (unsigned int)(period_ticks * (0.375-((float)TXS_Buffer)*0.00000015*(float)config->baud_rate));
     unsigned int t0l_ticks = (unsigned int)(period_ticks - t0h_ticks);
     rmt_bytes_encoder_config_t bytes_encoder_config = {
         .bit0 = {
@@ -172,3 +166,4 @@ err:
     }
     return ret;
 }
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
