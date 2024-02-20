@@ -81,8 +81,8 @@ bool IRAM_ATTR esc_rmt_rx_done_callback(rmt_channel_handle_t channel, const rmt_
     return 0;
 }
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-DShot_ESC::DShot_ESC(const dshot_frequency_t _frequency, bool _bidirectional, gpio_num_t ESC_Pin, bool TXS_Buffer, const char* _name, ESCData& _ESC_data):
-    name(_name), frequency(_frequency), bidirectional(_bidirectional), rx_callback_data(_ESC_data)
+DShot_ESC::DShot_ESC(const dshot_frequency_t _frequency, bool _bidirectional, gpio_num_t ESC_Pin, bool TXS_Buffer, ESCData& _ESC_data):
+    frequency(_frequency), bidirectional(_bidirectional), rx_callback_data(_ESC_data)
 {
     if(bidirectional) //Rx channel must be initialized first if bidirectional
     {

@@ -41,12 +41,11 @@ namespace DShot_callback
 class DShot_ESC
 {
     public:
-        DShot_ESC(const dshot_frequency_t _frequency, const bool _bidirectional, gpio_num_t ESC_Pin, bool TXS_Buffer, const char* _name, ESCData& _ESC_data);
+        DShot_ESC(const dshot_frequency_t _frequency, const bool _bidirectional, gpio_num_t ESC_Pin, bool TXS_Buffer, ESCData& _ESC_data);
         void Arm_ESC(void);
         void Throttle_Write(uint16_t throttle); // care to limit time between calls to at least (2.0*31.0 + 21.0*1.0e6*1.0/(((double)frequency)*5.0/4.0)) in bidirectional mode
 
     private:
-        const char* name;
         const dshot_frequency_t& frequency;
         const bool bidirectional;
 

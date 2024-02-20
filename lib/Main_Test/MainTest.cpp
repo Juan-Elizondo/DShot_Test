@@ -13,14 +13,14 @@ void Main_Test::setup(void)
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 void Main_Test::loop(void)
 {
-    dshot_frequency_t ESC_freq = DSHOT600;
+    dshot_frequency_t ESC_freq = DSHOT1200;
     bool bidirectional = true;
     bool TXS_Buffer = true;
 
     ESCData ESC_L_data;
     ESCData ESC_R_data;
-    DShot_ESC L_ESC(ESC_freq, bidirectional, ESC_L, TXS_Buffer, "L_ESC", ESC_L_data);
-    DShot_ESC R_ESC(ESC_freq, bidirectional, ESC_R, TXS_Buffer, "R_ESC", ESC_R_data);
+    DShot_ESC L_ESC(ESC_freq, bidirectional, ESC_L, TXS_Buffer, ESC_L_data);
+    DShot_ESC R_ESC(ESC_freq, bidirectional, ESC_R, TXS_Buffer, ESC_R_data);
     vTaskDelay(2000/portTICK_PERIOD_MS);
 
     esp_timer_handle_t main_loop_timer_handle;
